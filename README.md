@@ -10,6 +10,17 @@ fn main() {
 }
 ```
 
+Make your program fault-tolerant with `fort`:
+```rust
+#[fort::root]
+fn main() {
+    loop {
+        println!("Undying main!");
+        panic!("Error")
+    }
+}
+```
+
 # Example TCP Server
 
 ```rust
