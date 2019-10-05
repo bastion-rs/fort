@@ -1,0 +1,15 @@
+[package]
+name = "fort"
+version = "0.1.0"
+authors = ["Bastion Project Developers <team@bastion.rs>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+bastion = "0.2"
+
+syn = { version = "1.0.5", features = ["full"] }
+proc-macro2 = { version = "1.0.5", features = ["nightly"] }
+quote = "1.0.2"
