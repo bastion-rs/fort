@@ -1,8 +1,34 @@
 [package]
 name = "fort"
 version = "0.1.0"
+description = "Proc macro attributes for Bastion runtime"
 authors = ["Bastion Project Developers <team@bastion.rs>"]
 edition = "2018"
+keywords = ["fault-tolerant", "runtime", "actor", "system"]
+categories = []
+homepage = "https://github.com/bastion-rs/fort"
+repository = "https://github.com/bastion-rs/fort"
+readme = "README.md"
+license = "Apache-2.0/MIT"
+exclude = [
+	".github/*",
+	"examples/*",
+	"graphstore/*",
+	"tests/*",
+	"img/*",
+	"ci/*",
+	"benches/*",
+	"doc/*",
+	"*.png",
+	"*.dot",
+	"*.yml",
+	"*.toml",
+	"*.md"
+]
+
+[badges]
+travis-ci = { repository = "bastion-rs/fort", branch = "master" }
+maintenance = { status = "actively-developed" }
 
 [lib]
 proc-macro = true
@@ -13,3 +39,9 @@ bastion = "0.2"
 syn = { version = "1.0.5", features = ["full"] }
 proc-macro2 = { version = "1.0.5", features = ["nightly"] }
 quote = "1.0.2"
+
+[profile.dev]
+panic = "unwind"
+
+[profile.release]
+panic = "unwind"
