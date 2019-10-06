@@ -2,6 +2,13 @@
 
 Fort is proc macro attribute crate for Bastion.
 
+## Usage
+```toml
+[dependencies]
+fort = "0.1"
+bastion = "0.2.*"
+```
+
 You can directly use fort to load work onto the root supervisor with:
 ```rust
 #[fort::root]

@@ -35,7 +35,7 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     if name != "main" {
         let tokens = quote_spanned! { name.span() =>
-          compile_error!("only the main function can be tagged with #[fort::main]");
+          compile_error!("only the main function can be tagged with #[fort::root]");
         };
         return TokenStream::from(tokens);
     }

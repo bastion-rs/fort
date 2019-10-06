@@ -34,11 +34,12 @@ maintenance = { status = "actively-developed" }
 proc-macro = true
 
 [dependencies]
-bastion = "0.2"
-
 syn = { version = "1.0.5", features = ["full"] }
 proc-macro2 = { version = "1.0.5", features = ["nightly"] }
 quote = "1.0.2"
+
+[dev-dependencies]
+bastion = "0.2"
 
 [profile.dev]
 panic = "unwind"
