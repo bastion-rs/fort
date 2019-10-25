@@ -11,7 +11,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{NestedMeta, AttributeArgs, Lit, LitInt, Meta, MetaNameValue};
+use syn::{NestedMeta, AttributeArgs, Lit, Meta, MetaNameValue};
 
 /// Supplies bastion runtime to given `main`
 ///
@@ -19,6 +19,13 @@ use syn::{NestedMeta, AttributeArgs, Lit, LitInt, Meta, MetaNameValue};
 ///
 /// ```ignore
 /// #[fort::root]
+/// fn main() {
+///     println!("Running in Bastion runtime!");
+/// }
+/// ```
+/// If you want to spawn 2 times
+/// ```
+/// #[fort::root(3)]  /// This will spawn 3 process.
 /// fn main() {
 ///     println!("Running in Bastion runtime!");
 /// }
@@ -42,10 +49,10 @@ pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
         return TokenStream::from(tokens);
     }
 
-    let retry_time = if let Some(retry_meta) = get_meta(&attr_args, "retry") {
-        parse_retry(&retry_meta)
+    let redundancy = if let Some(retry_meta) = get_meta(&attr_args, "redundancy") {
+        parse_redundancy(&retry_meta)
     } else {
-        0
+        1
     };
 
     let result = quote! {
@@ -58,12 +65,14 @@ pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             Bastion::platform();
-            Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
-                    main();
-                    context.hook();
-                },
-                "",
-            );
+            for _i in 0..#redundancy {
+                Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
+                        main();
+                        context.hook();
+                    },
+                    "",
+                );
+            }
             Bastion::start()
         }
     };
@@ -71,11 +80,11 @@ pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
     result.into()
 }
 
-fn parse_retry(name_value: &MetaNameValue) -> usize {
+fn parse_redundancy(name_value: &MetaNameValue) -> i32 {
     if let Lit::Int(lit_int) = &name_value.lit {
-        lit_int.base10_parse::<usize>().unwrap()
+        lit_int.base10_parse::<i32>().unwrap()
     } else {
-        0
+        1
     }
 }
 
