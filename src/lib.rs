@@ -11,6 +11,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
+use syn::{NestedMeta, AttributeArgs, Lit, LitInt, Meta, MetaNameValue};
 
 /// Supplies bastion runtime to given `main`
 ///
@@ -24,8 +25,9 @@ use quote::{quote, quote_spanned};
 /// ```
 #[cfg(not(test))]
 #[proc_macro_attribute]
-pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::ItemFn);
+    let attr_args = syn::parse_macro_input!(attr as syn::AttributeArgs);
 
     let ret = &input.sig.output;
     let args = input.sig.inputs.iter();
@@ -39,6 +41,12 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
         };
         return TokenStream::from(tokens);
     }
+
+    let retry_time = if let Some(retry_meta) = get_meta(&attr_args, "retry") {
+        parse_retry(&retry_meta)
+    } else {
+        0
+    };
 
     let result = quote! {
         use bastion::prelude::*;
@@ -61,4 +69,25 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     result.into()
+}
+
+fn parse_retry(name_value: &MetaNameValue) -> usize {
+    if let Lit::Int(lit_int) = &name_value.lit {
+        lit_int.base10_parse::<usize>().unwrap()
+    } else {
+        0
+    }
+}
+
+fn get_meta(attr_args: &AttributeArgs, ident: &str) -> Option<MetaNameValue> {
+    let mut result = None;
+    for attr_args in attr_args {
+        if let NestedMeta::Meta(Meta::NameValue(name_value)) = attr_args {
+            if name_value.path.is_ident(ident) {
+                result = Some(name_value.clone())
+            }
+        }
+    }
+
+    result
 }
