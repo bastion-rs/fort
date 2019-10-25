@@ -24,8 +24,8 @@ use syn::{NestedMeta, AttributeArgs, Lit, Meta, MetaNameValue};
 /// }
 /// ```
 /// If you want to spawn 2 times
-/// ```
-/// #[fort::root(3)]  /// This will spawn 3 process.
+/// ```ignore
+/// #[fort::root(redundancy = 3)]  /// This will spawn 3 process.
 /// fn main() {
 ///     println!("Running in Bastion runtime!");
 /// }
@@ -65,14 +65,19 @@ pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             Bastion::platform();
-            for _i in 0..#redundancy {
-                Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
-                        main();
-                        context.hook();
-                    },
-                    "",
-                );
-            }
+            Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
+                    context.clone().spawn(
+                        |sub_context: BastionContext, sub_msg: Box<dyn Message>| {
+                            main();
+                            sub_context.blocking_hook();
+                        },
+                        "",
+                        #redundancy,
+                    );
+                    context.hook();
+                },
+                "",
+            );
             Bastion::start()
         }
     };
