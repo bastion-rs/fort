@@ -11,7 +11,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{NestedMeta, AttributeArgs, Lit, Meta, MetaNameValue};
+use syn::{AttributeArgs, Lit, Meta, MetaNameValue, NestedMeta};
 
 /// Supplies bastion runtime to given `main`
 ///
