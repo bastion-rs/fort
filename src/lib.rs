@@ -11,6 +11,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
+use syn::{AttributeArgs, Lit, Meta, MetaNameValue, NestedMeta};
 
 /// Supplies bastion runtime to given `main`
 ///
@@ -22,10 +23,18 @@ use quote::{quote, quote_spanned};
 ///     println!("Running in Bastion runtime!");
 /// }
 /// ```
+/// If you want to spawn 2 times
+/// ```ignore
+/// #[fort::root(redundancy = 3)]  /// This will spawn 3 process.
+/// fn main() {
+///     println!("Running in Bastion runtime!");
+/// }
+/// ```
 #[cfg(not(test))]
 #[proc_macro_attribute]
-pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::ItemFn);
+    let attr_args = syn::parse_macro_input!(attr as syn::AttributeArgs);
 
     let ret = &input.sig.output;
     let args = input.sig.inputs.iter();
@@ -40,6 +49,12 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
         return TokenStream::from(tokens);
     }
 
+    let redundancy = if let Some(retry_meta) = get_meta(&attr_args, "redundancy") {
+        parse_redundancy(&retry_meta)
+    } else {
+        1
+    };
+
     let result = quote! {
         use bastion::prelude::*;
 
@@ -51,7 +66,14 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
             Bastion::platform();
             Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
-                    main();
+                    context.clone().spawn(
+                        |sub_context: BastionContext, sub_msg: Box<dyn Message>| {
+                            main();
+                            sub_context.blocking_hook();
+                        },
+                        "",
+                        #redundancy,
+                    );
                     context.hook();
                 },
                 "",
@@ -61,4 +83,25 @@ pub fn root(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     result.into()
+}
+
+fn parse_redundancy(name_value: &MetaNameValue) -> i32 {
+    if let Lit::Int(lit_int) = &name_value.lit {
+        lit_int.base10_parse::<i32>().unwrap()
+    } else {
+        1
+    }
+}
+
+fn get_meta(attr_args: &AttributeArgs, ident: &str) -> Option<MetaNameValue> {
+    let mut result = None;
+    for attr_args in attr_args {
+        if let NestedMeta::Meta(Meta::NameValue(name_value)) = attr_args {
+            if name_value.path.is_ident(ident) {
+                result = Some(name_value.clone())
+            }
+        }
+    }
+
+    result
 }
