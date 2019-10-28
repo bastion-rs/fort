@@ -5,7 +5,7 @@ Fort is proc macro attribute crate for Bastion.
 ## Usage
 ```toml
 [dependencies]
-fort = "0.1"
+fort = "0.2"
 bastion = "0.2.*"
 ```
 
