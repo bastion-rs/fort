@@ -1,6 +1,6 @@
 [package]
 name = "fort"
-version = "0.1.2-alpha.0"
+version = "0.2.0"
 description = "Proc macro attributes for Bastion runtime"
 authors = ["Bastion Project Developers <team@bastion.rs>"]
 edition = "2018"
