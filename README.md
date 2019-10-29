@@ -28,6 +28,14 @@ fn main() {
 }
 ```
 
+You want to spawn multiple process
+```rust
+#[fort::root(redundancy = 3)]
+fn main() {
+    println!("Running in Bastion runtime!");
+}
+```
+
 # Example TCP Server
 
 ```rust
