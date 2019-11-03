@@ -23,7 +23,7 @@ use syn::{AttributeArgs, Lit, Meta, MetaNameValue, NestedMeta};
 ///     println!("Running in Bastion runtime!");
 /// }
 /// ```
-/// If you want to spawn 2 times
+/// If you want to spawn multiple times
 /// ```ignore
 /// #[fort::root(redundancy = 3)]  /// This will spawn 3 process.
 /// fn main() {

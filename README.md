@@ -5,7 +5,7 @@ Fort is proc macro attribute crate for Bastion.
 ## Usage
 ```toml
 [dependencies]
-fort = "0.1"
+fort = "0.2"
 bastion = "0.2.*"
 ```
 
@@ -25,6 +25,14 @@ fn main() {
         println!("Undying main!");
         panic!("Error")
     }
+}
+```
+
+You want to spawn multiple process
+```rust
+#[fort::root(redundancy = 3)]
+fn main() {
+    println!("Running in Bastion runtime!");
 }
 ```
 
