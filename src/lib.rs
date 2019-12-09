@@ -1,107 +1,87 @@
-//!
-//! Proc macro attributes for Bastion runtime.
-//!
-//! For more information visit [Bastion](https://docs.rs/bastion) project documentation.
-
 #![forbid(unsafe_code, future_incompatible, rust_2018_idioms)]
 #![deny(missing_debug_implementations, nonstandard_style)]
-#![recursion_limit = "512"]
 
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned};
-use syn::{AttributeArgs, Lit, Meta, MetaNameValue, NestedMeta};
+use quote::quote;
+use syn::{Error, Lit, Meta, NestedMeta, ReturnType};
 
-/// Supplies bastion runtime to given `main`
-///
-/// # Examples
-///
-/// ```ignore
-/// #[fort::root]
-/// fn main() {
-///     println!("Running in Bastion runtime!");
-/// }
-/// ```
-/// If you want to spawn multiple times
-/// ```ignore
-/// #[fort::root(redundancy = 3)]  /// This will spawn 3 process.
-/// fn main() {
-///     println!("Running in Bastion runtime!");
-/// }
-/// ```
-#[cfg(not(test))]
 #[proc_macro_attribute]
 pub fn root(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::ItemFn);
-    let attr_args = syn::parse_macro_input!(attr as syn::AttributeArgs);
+    let args = syn::parse_macro_input!(attr as syn::AttributeArgs);
 
-    let ret = &input.sig.output;
-    let args = input.sig.inputs.iter();
-    let name = &input.sig.ident;
     let body = &input.block;
     let attrs = &input.attrs;
+    let inputs = &input.sig.inputs;
+    let ret = &input.sig.output;
 
-    if name != "main" {
-        let tokens = quote_spanned! { name.span() =>
-          compile_error!("only the main function can be tagged with #[fort::root]");
-        };
-        return TokenStream::from(tokens);
+    if input.sig.asyncness.is_none() {
+        let msg = "functions tagged with '#[fort::root]' should be declared as 'async'";
+        return Error::new_spanned(input.sig.fn_token, msg)
+            .to_compile_error()
+            .into();
+    } else if input.sig.ident != "main" {
+        let msg = "only the main function can be tagged with '#[fort::root]'";
+        return Error::new_spanned(input.sig.ident, msg)
+            .to_compile_error()
+            .into();
+    } else if inputs.len() != 1 {
+        let msg = "functions tagged with '#[fort::root]' should have one argument of type 'BastionContext'";
+        return Error::new_spanned(inputs, msg).to_compile_error().into();
+    } else if let ReturnType::Default = ret {
+        let msg = "functions tagged with '#[fort::root]' should return 'Result<(), ()>'";
+        return Error::new_spanned(ret, msg).to_compile_error().into();
     }
 
-    let redundancy = if let Some(retry_meta) = get_meta(&attr_args, "redundancy") {
-        parse_redundancy(&retry_meta)
-    } else {
-        1
-    };
+    // TODO: assert!( inputs == [`::bastion::BastionContext`] );
+    // TODO: assert!( ret == `::std::result::Result<(), ()>` );
 
-    let result = quote! {
-        use bastion::prelude::*;
+    let mut redundancy = 1;
+    for arg in args {
+        if let NestedMeta::Meta(Meta::NameValue(meta)) = arg {
+            let ident = meta.path.get_ident();
+            if ident.is_none() {
+                let msg = "must specify an ident";
+                return Error::new_spanned(meta, msg).to_compile_error().into();
+            }
 
-        fn main() #ret {
+            let ident = ident.unwrap();
+            match ident.to_string().as_str() {
+                "redundancy" => {
+                    if let Lit::Int(n) = meta.lit {
+                        redundancy = n.base10_parse::<usize>().unwrap();
+                    } else {
+                        let msg = "'redundancy' should be a number";
+                        return Error::new_spanned(meta.lit, msg).to_compile_error().into();
+                    }
+                }
+                _ => {
+                    let msg = "unknown attribute";
+                    return Error::new_spanned(ident, msg).to_compile_error().into();
+                }
+            }
+        }
+    }
+
+    (quote! {
+        fn main() {
             #(#attrs)*
-            fn main(#(#args),*) #ret {
+            async fn main(#inputs) #ret {
                 #body
             }
 
-            Bastion::platform();
-            Bastion::spawn(|context: BastionContext, msg: Box<dyn Message>| {
-                    context.clone().spawn(
-                        |sub_context: BastionContext, sub_msg: Box<dyn Message>| {
-                            main();
-                            sub_context.blocking_hook();
-                        },
-                        "",
-                        #redundancy,
-                    );
-                    context.hook();
-                },
-                "",
-            );
-            Bastion::start()
+            bastion::Bastion::init();
+            bastion::Bastion::children(|children| {
+                children
+                    .with_exec(|ctx| main(ctx))
+                    .with_redundancy(#redundancy)
+            }).expect("Couldn't create the main children group.");
+
+            bastion::Bastion::start();
+            bastion::Bastion::block_until_stopped();
         }
-    };
-
-    result.into()
-}
-
-fn parse_redundancy(name_value: &MetaNameValue) -> i32 {
-    if let Lit::Int(lit_int) = &name_value.lit {
-        lit_int.base10_parse::<i32>().unwrap()
-    } else {
-        1
-    }
-}
-
-fn get_meta(attr_args: &AttributeArgs, ident: &str) -> Option<MetaNameValue> {
-    let mut result = None;
-    for attr_args in attr_args {
-        if let NestedMeta::Meta(Meta::NameValue(name_value)) = attr_args {
-            if name_value.path.is_ident(ident) {
-                result = Some(name_value.clone())
-            }
-        }
-    }
-
-    result
+    })
+    .into()
 }
