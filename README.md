@@ -6,7 +6,7 @@ Fort is proc macro attribute crate for Bastion.
 ```toml
 [dependencies]
 fort = "0.2"
-bastion = "0.2.*"
+bastion = "0.3.*"
 ```
 
 You can directly use fort to load work onto the root supervisor with:
