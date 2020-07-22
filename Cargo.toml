@@ -39,7 +39,7 @@ proc-macro2 = { version = "1.0.5", features = ["nightly"] }
 quote = "1.0.2"
 
 [dev-dependencies]
-bastion = "0.3"
+bastion = "0.4"
 
 [profile.dev]
 panic = "unwind"
