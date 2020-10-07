@@ -1,8 +1,6 @@
 #![forbid(unsafe_code, future_incompatible, rust_2018_idioms)]
 #![deny(missing_debug_implementations, nonstandard_style)]
 
-extern crate proc_macro;
-
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Error, Lit, Meta, NestedMeta, ReturnType};
